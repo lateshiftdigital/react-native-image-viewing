@@ -1,3 +1,6 @@
 node_modules/
 .expo
 .vscode
+
+# macOS
+.DS_Store

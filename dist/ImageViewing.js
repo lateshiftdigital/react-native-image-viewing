@@ -21,18 +21,39 @@ function ImageViewing({ images, keyExtractor, imageIndex, visible, onRequestClos
     const [opacity, onRequestCloseEnhanced] = useRequestClose(onRequestClose);
     const [layout, setLayout] = useState({ width: 0, height: 0 });
     const [currentImageIndex, onScroll] = useImageIndexChange(imageIndex, layout);
+    const previousLayout = useRef(layout);
     const [headerTransform, footerTransform, toggleBarsVisible] = useAnimatedComponents();
+    const [orientationChanged, setOrientationChanged] = useState(false);
     useEffect(() => {
         if (onImageIndexChange) {
             onImageIndexChange(currentImageIndex);
         }
     }, [currentImageIndex]);
+    useEffect(() => {
+        if (layout.width !== previousLayout.current.width && layout.width !== 0) {
+            setOrientationChanged(true);
+            const timer = setTimeout(() => {
+                var _a;
+                (_a = imageList.current) === null || _a === void 0 ? void 0 : _a.scrollToIndex({
+                    index: currentImageIndex,
+                    animated: false,
+                });
+                setOrientationChanged(false);
+                previousLayout.current = layout;
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [layout.width, currentImageIndex]);
     const onZoom = useCallback((isScaled) => {
-        var _a, _b;
-        // @ts-ignore
-        (_b = (_a = imageList) === null || _a === void 0 ? void 0 : _a.current) === null || _b === void 0 ? void 0 : _b.setNativeProps({ scrollEnabled: !isScaled });
+        var _a;
+        (_a = imageList.current) === null || _a === void 0 ? void 0 : _a.setNativeProps({ scrollEnabled: !isScaled });
         toggleBarsVisible(!isScaled);
     }, [imageList]);
+    const getItemLayout = useCallback((_, index) => ({
+        length: layout.width,
+        offset: layout.width * index,
+        index,
+    }), [layout.width, orientationChanged]);
     if (!visible) {
         return null;
     }
@@ -45,18 +66,21 @@ function ImageViewing({ images, keyExtractor, imageIndex, visible, onRequestClos
     ]} hardwareAccelerated>
       <StatusBarManager presentationStyle={presentationStyle}/>
       <View style={[styles.container, { opacity, backgroundColor }]} onLayout={(e) => {
-        setLayout(e.nativeEvent.layout);
+        const newLayout = e.nativeEvent.layout;
+        if (newLayout.width !== layout.width ||
+            newLayout.height !== layout.height) {
+            setLayout(newLayout);
+        }
     }}>
         <Animated.View style={[styles.header, { transform: headerTransform }]}>
           {typeof HeaderComponent !== "undefined" ? (React.createElement(HeaderComponent, {
         imageIndex: currentImageIndex,
     })) : (<ImageDefaultHeader onRequestClose={onRequestCloseEnhanced}/>)}
         </Animated.View>
-        <VirtualizedList ref={imageList} data={images} horizontal pagingEnabled windowSize={2} initialNumToRender={1} maxToRenderPerBatch={1} showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} initialScrollIndex={imageIndex} getItem={(_, index) => images[index]} getItemCount={() => images.length} getItemLayout={(_, index) => ({
-        length: layout.width,
-        offset: layout.width * index,
-        index,
-    })} renderItem={({ item: imageSrc }) => (<ImageItem onZoom={onZoom} imageSrc={imageSrc} onRequestClose={onRequestCloseEnhanced} onLongPress={onLongPress} delayLongPress={delayLongPress} swipeToCloseEnabled={swipeToCloseEnabled} doubleTapToZoomEnabled={doubleTapToZoomEnabled} layout={layout}/>)} onMomentumScrollEnd={onScroll} 
+        <VirtualizedList key={orientationChanged ? 'orientation-changed' : 'normal'} ref={imageList} data={images} horizontal pagingEnabled windowSize={2} initialNumToRender={1} maxToRenderPerBatch={1} showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} initialScrollIndex={imageIndex} getItem={(_, index) => images[index]} getItemCount={() => images.length} getItemLayout={getItemLayout} renderItem={({ item: imageSrc }) => (<ImageItem onZoom={onZoom} imageSrc={imageSrc} onRequestClose={onRequestCloseEnhanced} onLongPress={onLongPress} delayLongPress={delayLongPress} swipeToCloseEnabled={swipeToCloseEnabled} doubleTapToZoomEnabled={doubleTapToZoomEnabled} layout={layout}/>)} onMomentumScrollEnd={onScroll} maintainVisibleContentPosition={{
+        minIndexForVisible: 0,
+        autoscrollToTopThreshold: 10,
+    }} removeClippedSubviews={false} 
     //@ts-ignore
     keyExtractor={(imageSrc, index) => keyExtractor
         ? keyExtractor(imageSrc, index)

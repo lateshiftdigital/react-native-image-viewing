@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  */
-import React, { useCallback, useRef, useState, useMemo } from "react";
+import React, { useCallback, useRef, useState, useMemo, useEffect } from "react";
 import { Animated, ScrollView, } from "react-native";
 import useImageDimensions from "../../hooks/useImageDimensions";
 import usePanResponder from "../../hooks/usePanResponder";
@@ -62,6 +62,12 @@ const ImageItem = ({ imageSrc, onZoom, onRequestClose, onLongPress, delayLongPre
         const offsetY = (_c = (_b = (_a = nativeEvent) === null || _a === void 0 ? void 0 : _a.contentOffset) === null || _b === void 0 ? void 0 : _b.y, (_c !== null && _c !== void 0 ? _c : 0));
         scrollValueY.setValue(offsetY);
     };
+    // Reset scroll position when layout changes
+    useEffect(() => {
+        if (imageContainer.current) {
+            imageContainer.current.scrollTo({ x: 0, y: 0, animated: false });
+        }
+    }, [layout.width, layout.height]);
     const dynamicStyles = useMemo(() => ({
         listItem: {
             width: layout.width,

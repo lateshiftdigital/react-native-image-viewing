@@ -6,7 +6,7 @@
  *
  */
 
-import React, { useCallback, useRef, useState, useMemo } from "react";
+import React, { useCallback, useRef, useState, useMemo, useEffect } from "react";
 
 import {
   Animated,
@@ -113,6 +113,13 @@ const ImageItem = ({
     const offsetY = nativeEvent?.contentOffset?.y ?? 0;
     scrollValueY.setValue(offsetY);
   };
+
+  // Reset scroll position when layout changes
+  useEffect(() => {
+    if (imageContainer.current) {
+      imageContainer.current.scrollTo({ x: 0, y: 0, animated: false });
+    }
+  }, [layout.width, layout.height]);
 
   const dynamicStyles = useMemo(() => ({
     listItem: {
