@@ -14,6 +14,8 @@ import {
   VirtualizedList,
   ModalProps,
   Modal,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 
 import ImageItem from "./components/ImageItem/ImageItem";
@@ -77,6 +79,8 @@ function ImageViewing({
   const [headerTransform, footerTransform, toggleBarsVisible] =
     useAnimatedComponents();
   const [orientationChanged, setOrientationChanged] = useState(false);
+  const [currentScrollIndex, setCurrentScrollIndex] = useState(imageIndex);
+  const orientationChangeInProgress = useRef(false);
 
   useEffect(() => {
     if (onImageIndexChange) {
@@ -86,13 +90,22 @@ function ImageViewing({
 
   useEffect(() => {
     if (layout.width !== previousLayout.current.width && layout.width !== 0) {
+      orientationChangeInProgress.current = true;
       setOrientationChanged(true);
+      
+      const targetIndex = currentImageIndex;
       
       const timer = setTimeout(() => {
         imageList.current?.scrollToIndex({
-          index: currentImageIndex,
+          index: targetIndex,
           animated: false,
         });
+        
+        setCurrentScrollIndex(targetIndex);
+        
+        setTimeout(() => {
+          orientationChangeInProgress.current = false;
+        }, 100);
         
         setOrientationChanged(false);
         previousLayout.current = layout;
@@ -100,7 +113,7 @@ function ImageViewing({
 
       return () => clearTimeout(timer);
     }
-  }, [layout.width, currentImageIndex]);
+  }, [layout.width]);
 
   const onZoom = useCallback(
     (isScaled: boolean) => {
@@ -118,6 +131,13 @@ function ImageViewing({
     }),
     [layout.width, orientationChanged]
   );
+
+  const onMomentumScrollEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (orientationChangeInProgress.current) {
+      return;
+    }
+    onScroll(event);
+  }, [onScroll, currentImageIndex]);
 
   if (!visible) {
     return null;
@@ -170,7 +190,7 @@ function ImageViewing({
           maxToRenderPerBatch={1}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
-          initialScrollIndex={imageIndex}
+          initialScrollIndex={currentScrollIndex}
           getItem={(_, index) => images[index]}
           getItemCount={() => images.length}
           getItemLayout={getItemLayout}
@@ -186,7 +206,7 @@ function ImageViewing({
               layout={layout}
             />
           )}
-          onMomentumScrollEnd={onScroll}
+          onMomentumScrollEnd={onMomentumScrollEnd}
           maintainVisibleContentPosition={{
             minIndexForVisible: 0,
             autoscrollToTopThreshold: 10,
@@ -200,6 +220,9 @@ function ImageViewing({
               ? `${imageSrc}`
               : imageSrc.uri
           }
+          onScrollToIndexFailed={(info) => {
+            console.warn('Scroll to index failed:', info);
+          }}
         />
         {typeof FooterComponent !== "undefined" && (
           <Animated.View

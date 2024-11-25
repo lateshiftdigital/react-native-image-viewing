@@ -24,6 +24,8 @@ function ImageViewing({ images, keyExtractor, imageIndex, visible, onRequestClos
     const previousLayout = useRef(layout);
     const [headerTransform, footerTransform, toggleBarsVisible] = useAnimatedComponents();
     const [orientationChanged, setOrientationChanged] = useState(false);
+    const [currentScrollIndex, setCurrentScrollIndex] = useState(imageIndex);
+    const orientationChangeInProgress = useRef(false);
     useEffect(() => {
         if (onImageIndexChange) {
             onImageIndexChange(currentImageIndex);
@@ -31,19 +33,25 @@ function ImageViewing({ images, keyExtractor, imageIndex, visible, onRequestClos
     }, [currentImageIndex]);
     useEffect(() => {
         if (layout.width !== previousLayout.current.width && layout.width !== 0) {
+            orientationChangeInProgress.current = true;
             setOrientationChanged(true);
+            const targetIndex = currentImageIndex;
             const timer = setTimeout(() => {
                 var _a;
                 (_a = imageList.current) === null || _a === void 0 ? void 0 : _a.scrollToIndex({
-                    index: currentImageIndex,
+                    index: targetIndex,
                     animated: false,
                 });
+                setCurrentScrollIndex(targetIndex);
+                setTimeout(() => {
+                    orientationChangeInProgress.current = false;
+                }, 100);
                 setOrientationChanged(false);
                 previousLayout.current = layout;
             }, 100);
             return () => clearTimeout(timer);
         }
-    }, [layout.width, currentImageIndex]);
+    }, [layout.width]);
     const onZoom = useCallback((isScaled) => {
         var _a;
         (_a = imageList.current) === null || _a === void 0 ? void 0 : _a.setNativeProps({ scrollEnabled: !isScaled });
@@ -54,6 +62,12 @@ function ImageViewing({ images, keyExtractor, imageIndex, visible, onRequestClos
         offset: layout.width * index,
         index,
     }), [layout.width, orientationChanged]);
+    const onMomentumScrollEnd = useCallback((event) => {
+        if (orientationChangeInProgress.current) {
+            return;
+        }
+        onScroll(event);
+    }, [onScroll, currentImageIndex]);
     if (!visible) {
         return null;
     }
@@ -77,7 +91,7 @@ function ImageViewing({ images, keyExtractor, imageIndex, visible, onRequestClos
         imageIndex: currentImageIndex,
     })) : (<ImageDefaultHeader onRequestClose={onRequestCloseEnhanced}/>)}
         </Animated.View>
-        <VirtualizedList key={orientationChanged ? 'orientation-changed' : 'normal'} ref={imageList} data={images} horizontal pagingEnabled windowSize={2} initialNumToRender={1} maxToRenderPerBatch={1} showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} initialScrollIndex={imageIndex} getItem={(_, index) => images[index]} getItemCount={() => images.length} getItemLayout={getItemLayout} renderItem={({ item: imageSrc }) => (<ImageItem onZoom={onZoom} imageSrc={imageSrc} onRequestClose={onRequestCloseEnhanced} onLongPress={onLongPress} delayLongPress={delayLongPress} swipeToCloseEnabled={swipeToCloseEnabled} doubleTapToZoomEnabled={doubleTapToZoomEnabled} layout={layout}/>)} onMomentumScrollEnd={onScroll} maintainVisibleContentPosition={{
+        <VirtualizedList key={orientationChanged ? 'orientation-changed' : 'normal'} ref={imageList} data={images} horizontal pagingEnabled windowSize={2} initialNumToRender={1} maxToRenderPerBatch={1} showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} initialScrollIndex={currentScrollIndex} getItem={(_, index) => images[index]} getItemCount={() => images.length} getItemLayout={getItemLayout} renderItem={({ item: imageSrc }) => (<ImageItem onZoom={onZoom} imageSrc={imageSrc} onRequestClose={onRequestCloseEnhanced} onLongPress={onLongPress} delayLongPress={delayLongPress} swipeToCloseEnabled={swipeToCloseEnabled} doubleTapToZoomEnabled={doubleTapToZoomEnabled} layout={layout}/>)} onMomentumScrollEnd={onMomentumScrollEnd} maintainVisibleContentPosition={{
         minIndexForVisible: 0,
         autoscrollToTopThreshold: 10,
     }} removeClippedSubviews={false} 
@@ -86,7 +100,9 @@ function ImageViewing({ images, keyExtractor, imageIndex, visible, onRequestClos
         ? keyExtractor(imageSrc, index)
         : typeof imageSrc === "number"
             ? `${imageSrc}`
-            : imageSrc.uri}/>
+            : imageSrc.uri} onScrollToIndexFailed={(info) => {
+        console.warn('Scroll to index failed:', info);
+    }}/>
         {typeof FooterComponent !== "undefined" && (<Animated.View style={[styles.footer, { transform: footerTransform }]}>
             {React.createElement(FooterComponent, {
         imageIndex: currentImageIndex,
