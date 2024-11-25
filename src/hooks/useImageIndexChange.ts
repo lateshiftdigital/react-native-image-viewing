@@ -11,7 +11,7 @@ import { NativeSyntheticEvent, NativeScrollEvent } from "react-native";
 
 import { Dimensions } from "../@types";
 
-const useImageIndexChange = (imageIndex: number, screen: Dimensions) => {
+const useImageIndexChange = (imageIndex: number, layout: Dimensions) => {
   const [currentImageIndex, setImageIndex] = useState(imageIndex);
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const {
@@ -20,8 +20,8 @@ const useImageIndexChange = (imageIndex: number, screen: Dimensions) => {
       },
     } = event;
 
-    if (screen.width) {
-      const nextIndex = Math.round(scrollX / screen.width);
+    if (layout.width) {
+      const nextIndex = Math.round(scrollX / layout.width);
       setImageIndex(nextIndex < 0 ? 0 : nextIndex);
     }
   };
