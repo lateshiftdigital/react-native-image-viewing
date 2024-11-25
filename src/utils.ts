@@ -88,38 +88,35 @@ export const getImageStyles = (
 };
 
 export const getImageTranslate = (
-  image: Dimensions,
-  screen: Dimensions
+  imageDimensions: Dimensions,
+  layout: Dimensions
 ): Position => {
-  const getTranslateForAxis = (axis: "x" | "y"): number => {
-    const imageSize = axis === "x" ? image.width : image.height;
-    const screenSize = axis === "x" ? screen.width : screen.height;
-
-    return (screenSize - imageSize) / 2;
-  };
-
+  const { width, height } = layout;
   return {
-    x: getTranslateForAxis("x"),
-    y: getTranslateForAxis("y"),
+    x: (width - imageDimensions.width) / 2,
+    y: (height - imageDimensions.height) / 2,
   };
 };
 
 export const getImageDimensionsByTranslate = (
   translate: Position,
-  screen: Dimensions
-): Dimensions => ({
-  width: screen.width - translate.x * 2,
-  height: screen.height - translate.y * 2,
-});
+  layout: Dimensions
+): Dimensions => {
+  const { width, height } = layout;
+  return {
+    width: width - translate.x * 2,
+    height: height - translate.y * 2,
+  };
+};
 
 export const getImageTranslateForScale = (
   currentTranslate: Position,
   targetScale: number,
-  screen: Dimensions
+  layout: Dimensions
 ): Position => {
   const { width, height } = getImageDimensionsByTranslate(
     currentTranslate,
-    screen
+    layout
   );
 
   const targetImageDimensions = {
@@ -127,7 +124,7 @@ export const getImageTranslateForScale = (
     height: height * targetScale,
   };
 
-  return getImageTranslate(targetImageDimensions, screen);
+  return getImageTranslate(targetImageDimensions, layout);
 };
 
 type HandlerType = (
