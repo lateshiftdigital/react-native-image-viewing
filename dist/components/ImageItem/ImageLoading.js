@@ -12,6 +12,7 @@ const ImageLoading = ({ style }) => (<View style={[style, styles.loading]}>
   </View>);
 const styles = StyleSheet.create({
     loading: {
+        ...StyleSheet.absoluteFillObject,
         alignItems: "center",
         justifyContent: "center",
     },
